@@ -1301,7 +1301,7 @@ if __name__ == '__main__':
     guizhou_test_spec = []
 
     val_aucs = []
-    pt_names = ['model_best_acc_val', 'model_best_auc_val', 'model_ema_best_acc_val', 'model_ema_best_auc_val', 'model_best_acc_test', 'model_best_auc_test']
+    pt_names = ['model_best_acc_val', 'model_best_auc_val', 'model_ema_best_acc_val', 'model_ema_best_auc_val']
     # for ii in range(len(seeds)):
     for ii in range(1):
         ii += 1
