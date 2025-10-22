@@ -65,7 +65,7 @@ def parse_option():
     parser.add_argument('--amp-opt-level', type=str, choices=['O0', 'O1', 'O2'],
                         help='mixed precision opt level, if O0, no amp is used (deprecated!)')
     parser.add_argument('--output',
-                        default='/disk3/wjr/workspace/sec_nejm/temp2',
+                        default='./jsrt_output',
                         type=str, metavar='PATH',
                         help='root of output folder, the full path is <output>/<model_name>/<tag> (default: output)')
     parser.add_argument('--tag', help='tag of experiment')
@@ -156,26 +156,26 @@ def build_phe_loader(args):
         d_transform.ToTensor(),
         d_transform.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
     ])
-    dataset_train = JSRT_w7masks_5Subregions_wsubroi_Mixednew_Dataset('/disk3/wjr/dataset/JSRT/visimg_process/jsrt_seg_rec_img_1024',
-                                                      '/disk3/wjr/dataset/JSRT/visimg_process/jsrt_sec_mask_img_1024',
-                                                      txtpath='/disk3/wjr/dataset/JSRT/train_1.txt',
-                                                      csvpath='/disk3/wjr/dataset/JSRT/segrecimg_info_1024.csv',
+    dataset_train = JSRT_w7masks_5Subregions_wsubroi_Mixednew_Dataset('/dataset/JSRT/visimg_process/jsrt_seg_rec_img_1024',
+                                                      '/dataset/JSRT/visimg_process/jsrt_sec_mask_img_1024',
+                                                      txtpath='/dataset/JSRT/train_1.txt',
+                                                      csvpath='/dataset/JSRT/segrecimg_info_1024.csv',
                                                       data_transform=global_transfo2,
                                                       pil2tensor_transform=pil2tensor_transfo,
                                                       data_subregions_transform=global_transfo2_subregions,
                                                       sub_img_size=256, )
 
-    dataset_train2 = JSRT_wmask_Dataset('/disk3/wjr/dataset/JSRT/visimg_process/jsrt_seg_rec_img',
-                                        '/disk3/wjr/dataset/JSRT/visimg_process/jsrt_sec_mask_img',
-                                        txtpath='/disk3/wjr/dataset/JSRT/train_1.txt',
+    dataset_train2 = JSRT_wmask_Dataset('/dataset/JSRT/visimg_process/jsrt_seg_rec_img',
+                                        '/dataset/JSRT/visimg_process/jsrt_sec_mask_img',
+                                        txtpath='/dataset/JSRT/train.txt',
                                         data_transform=transform)
 
-    dataset_val = JSRT_wmask_Dataset('/disk3/wjr/dataset/JSRT/visimg_process/jsrt_seg_rec_img',
-                                     '/disk3/wjr/dataset/JSRT/visimg_process/jsrt_sec_mask_img',
-                                     txtpath='/disk3/wjr/dataset/JSRT/val_1.txt', data_transform=transform)
-    dataset_test = JSRT_wmask_Dataset('/disk3/wjr/dataset/JSRT/visimg_process/jsrt_seg_rec_img',
-                                      '/disk3/wjr/dataset/JSRT/visimg_process/jsrt_sec_mask_img',
-                                      txtpath='/disk3/wjr/dataset/JSRT/test_1.txt', data_transform=transform)
+    dataset_val = JSRT_wmask_Dataset('/dataset/JSRT/visimg_process/jsrt_seg_rec_img',
+                                     '/dataset/JSRT/visimg_process/jsrt_sec_mask_img',
+                                     txtpath='/disk3/wjr/dataset/JSRT/val.txt', data_transform=transform)
+    dataset_test = JSRT_wmask_Dataset('/dataset/JSRT/visimg_process/jsrt_seg_rec_img',
+                                      '/dataset/JSRT/visimg_process/jsrt_sec_mask_img',
+                                      txtpath='/dataset/JSRT/test.txt', data_transform=transform)
 
 
     data_loader_train = torch.utils.data.DataLoader(
@@ -299,6 +299,8 @@ def main(config, ptname='model_ema_best_auc_shanxi_val'):
 
     acc_best_epoch = 0
     auc_best_epoch=0
+    acc_ema_best_epoch = 0
+    auc_ema_best_epoch=0
 
     for epoch in range(config.TRAIN.START_EPOCH, 50):
         writer = train_one_epoch(config, model, criterion, data_loader_train, optimizer, epoch, mixup_fn=None,
@@ -309,12 +311,10 @@ def main(config, ptname='model_ema_best_auc_shanxi_val'):
                                               index='val')
         loss, auc_ema, acc_ema, writer = validate(data_loader_val, model_ema.ema, epoch, writer,
                                                       index='val_ema')
-        test_loss, test_auc,test_acc, writer = validate(data_loader_test, model, epoch, writer, index='test')
-        test_loss, test_auc_ema, test_acc_ema, writer = validate(data_loader_test, model_ema.ema, epoch, writer, index='test_ema')
-
+        
 
         if acc > max_acc_avg:
-            # acc_best_epoch = epoch
+            acc_best_epoch = epoch
             max_acc_avg = max(max_acc_avg, acc)
             save_test_checkpoint(config, epoch, model, max_acc_avg, optimizer, lr_scheduler,
                                  loss_scaler,
@@ -322,7 +322,7 @@ def main(config, ptname='model_ema_best_auc_shanxi_val'):
         else:
             max_acc_avg = max(max_acc_avg, acc)
         if auc> max_auc_avg:
-            # auc_best_epoch = epoch
+            auc_best_epoch = epoch
             max_auc_avg = max(max_auc_avg, auc)
             save_test_checkpoint(config, epoch, model, max_auc_avg, optimizer, lr_scheduler,
                                  loss_scaler,
@@ -331,7 +331,7 @@ def main(config, ptname='model_ema_best_auc_shanxi_val'):
             max_auc_avg = max(max_auc_avg, auc)
 
         if acc_ema > max_acc_ema_avg:
-            # acc_best_epoch = epoch
+            acc_ema_best_epoch = epoch
             max_acc_ema_avg = max(max_acc_ema_avg, acc_ema)
             save_test_checkpoint(config, epoch, model_ema.ema, max_acc_ema_avg, optimizer, lr_scheduler,
                                  loss_scaler,
@@ -339,32 +339,13 @@ def main(config, ptname='model_ema_best_auc_shanxi_val'):
         else:
             max_acc_ema_avg = max(max_acc_ema_avg, acc_ema)
         if auc_ema > max_auc_ema_avg:
-            # auc_best_epoch = epoch
+            auc_ema_best_epoch = epoch
             max_auc_ema_avg = max(max_auc_ema_avg, auc_ema)
             save_test_checkpoint(config, epoch, model_ema.ema, max_auc_ema_avg, optimizer, lr_scheduler,
                                  loss_scaler,
                                  logger, ptname='model_ema_best_auc_val.pth')
         else:
             max_auc_ema_avg = max(max_auc_ema_avg, auc_ema)
-
-
-
-        if test_acc > max_acc_avg:
-            acc_best_epoch = epoch
-            max_acc_test_avg = max(max_acc_test_avg, test_acc)
-            save_test_checkpoint(config, epoch, model, max_acc_test_avg, optimizer, lr_scheduler,
-                                 loss_scaler,
-                                 logger, ptname='model_best_acc_test.pth')
-        else:
-            max_acc_test_avg = max(max_acc_test_avg, test_acc)
-        if test_auc> max_auc_test_avg:
-            auc_best_epoch = epoch
-            max_auc_test_avg = max(max_auc_test_avg, test_auc)
-            save_test_checkpoint(config, epoch, model, max_auc_test_avg, optimizer, lr_scheduler,
-                                 loss_scaler,
-                                 logger, ptname='model_best_auc_test.pth')
-        else:
-            max_auc_test_avg = max(max_auc_test_avg, test_auc)
 
         logger.info(
             f'Best acc epoch: {acc_best_epoch}' + ' Max acc average: ' + "%.4f" % max_acc_test_avg + f'Best auc epoch: {auc_best_epoch}' +  'Test auc average: ' + "%.4f" % max_auc_test_avg)
