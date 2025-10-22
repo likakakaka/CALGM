@@ -62,7 +62,7 @@ def parse_option():
     parser.add_argument('--amp-opt-level', type=str, choices=['O0', 'O1', 'O2'],
                         help='mixed precision opt level, if O0, no amp is used (deprecated!)')
     parser.add_argument('--output',
-                        default='/disk3/wjr/workspace/sec_nejm/temp',
+                        default='./OUTPUT',
                         type=str, metavar='PATH',
                         help='root of output folder, the full path is <output>/<model_name>/<tag> (default: output)')
     parser.add_argument('--tag', help='tag of experiment')
@@ -88,7 +88,7 @@ def parse_option():
     parser.add_argument('--model_ema_decay', type=float, default=0.999, help='')
     parser.add_argument('--model_ema_force_cpu', type=str2bool, default=False, help='')
 
-    parser.add_argument('--data_root', type=str, default='/disk3/wjr/dataset/nejm/shanxidataset/',
+    parser.add_argument('--data_root', type=str, default='/dataset/pneumoconiosis_path',
                         help='The path of dataset')
     parser.add_argument('--seed', default=20, type=int)
     parser.add_argument('--memory_limit_rate', type=float, default=-1, help='limitation of gpu memory use')
@@ -165,7 +165,7 @@ def build_phe_loader(args):
     ])
     dataset_train = Shanxi_w7masks_5Subregions_wsubroi_Mixednew_Dataset(args.data_root + 'seg_rec_img_1024',
                                                       args.data_root + 'seg_rec_mask_1024',
-                                                      txtpath=args.data_root + 'stage1_health_txt/selected_dcm_saomiao_900_health308_sick_592/train.txt',
+                                                      txtpath=args.data_root + 'train.txt',
                                                       csvpath=args.data_root + 'subregions_label_shanxi_all.xlsx',
                                                       data_transform=global_transfo2,
                                                       pil2tensor_transform=pil2tensor_transfo,
@@ -174,7 +174,7 @@ def build_phe_loader(args):
 
     dataset_val = Shanxi_w7masks_5Subregions_wsubroi_Dataset(args.data_root + 'seg_rec_img_1024',
                                                               args.data_root + 'seg_rec_mask_1024',
-                                                              txtpath=args.data_root + 'stage1_health_txt/selected_dcm_saomiao_900_health308_sick_592/val.txt',
+                                                              txtpath=args.data_root + 'val.txt',
                                                               csvpath=args.data_root + 'subregions_label_shanxi_all.xlsx',
                                                               data_transform=global_transfo,
                                                               pil2tensor_transform=pil2tensor_transfo,
@@ -182,17 +182,17 @@ def build_phe_loader(args):
                                                               sub_img_size=256, )
     dataset_test = Shanxi_w7masks_5Subregions_wsubroi_Dataset(args.data_root + 'seg_rec_img_1024',
                                                               args.data_root + 'seg_rec_mask_1024',
-                                                              txtpath=args.data_root + 'stage1_health_txt/selected_dcm_saomiao_900_health308_sick_592/test2.txt',
+                                                              txtpath=args.data_root + 'test2.txt',
                                                               csvpath=args.data_root + 'subregions_label_shanxi_all.xlsx',
                                                               data_transform=global_transfo2,
                                                               pil2tensor_transform=pil2tensor_transfo,
                                                               data_subregions_transform=global_transfo2_subregions,
                                                               sub_img_size=256, )
     dataset_test2 = Shanxi_w7masks_5Subregions_wsubroi_Dataset(
-        '/disk3/wjr/dataset/nejm/guizhoudataset/seg_rec_img_1024',
-        '/disk3/wjr/dataset/nejm/guizhoudataset/seg_rec_mask_1024',
-        txtpath='/disk3/wjr/dataset/nejm/guizhoudataset/guizhou_one.txt',
-        csvpath='/disk3/wjr/dataset/nejm/guizhoudataset/subregions_guizhou_all.xlsx',
+        '/dataset/guizhoudataset/seg_rec_img_1024',
+        '/dataset/guizhoudataset/seg_rec_mask_1024',
+        txtpath='/dataset/guizhoudataset/guizhou_one.txt',
+        csvpath='/dataset/guizhoudataset/subregions_guizhou_all.xlsx',
         data_transform=global_transfo2,
         pil2tensor_transform=pil2tensor_transfo,
         data_subregions_transform=global_transfo2_subregions,
@@ -311,7 +311,10 @@ def main(config, ptname='model_ema_best_auc_shanxi_val'):
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
     writer = SummaryWriter(log_dir=log_path)
 
-    best_epoch = 0
+    acc_ema_best_epoch = 0
+    acc_best_epoch = 0
+    auc_ema_best_epoch = 0
+    auc_best_epoch = 0
 
     for epoch in range(config.TRAIN.START_EPOCH, 50):
         writer = train_one_epoch(config, model, criterion, data_loader_train, optimizer, epoch, mixup_fn=None,
@@ -323,24 +326,20 @@ def main(config, ptname='model_ema_best_auc_shanxi_val'):
                                               valdata='shanxi_val')
         acc_ema, _, _, auc_ema, writer = validate(data_loader_val, model_ema.ema, epoch, writer,
                                                       valdata='shanxi_val_ema')
-        test_acc, _, _, test_auc, writer = validate(data_loader_test, model, epoch, writer, valdata='shanxi_test')
-        test_acc_ema, _, _, test_auc_ema, writer = validate(data_loader_test, model_ema.ema, epoch, writer, valdata='shanxi_test_ema')
-        test_acc2, _, _, auc_test2, writer = validate(data_loader_test2, model, epoch, writer, valdata='guizhou_test')
-        test_acc2_ema, _, _, auc_test2_ema, writer = validate(data_loader_test2, model_ema.ema, epoch, writer,
-                                                            valdata='guizhou_test_ema')
+       
         # val_avg = test_acc2_ema
         # logger.info(f"Task average of the network on the val images: {val_avg:.4f}")
-        if test_acc2_ema > max_acc_avg:
-            best_epoch = epoch
-            max_acc_avg = max(max_acc_avg, test_acc2_ema)
-            save_test_checkpoint(config, epoch, model_ema.ema, max_acc_avg, optimizer, lr_scheduler,
+        if acc > max_acc_avg:
+            acc_best_epoch = epoch
+            max_acc_avg = max(max_acc_avg, acc)
+            save_test_checkpoint(config, epoch, model, max_acc_avg, optimizer, lr_scheduler,
                                  loss_scaler,
-                                 logger, ptname='model_ema_best_acc_guizhou_test.pth')
+                                 logger, ptname='model_best_acc_shanxi_val.pth')
         else:
-            max_acc_avg = max(max_acc_avg, test_acc2_ema)
+            max_acc_avg = max(max_acc_avg, acc)
 
         if acc_ema > max_acc_ema_avg:
-            acc_best_epoch = epoch
+            acc_ema_best_epoch = epoch
             max_acc_ema_avg = max(max_acc_ema_avg, acc_ema)
             save_test_checkpoint(config, epoch, model_ema.ema, max_acc_ema_avg, optimizer, lr_scheduler,
                                  loss_scaler,
@@ -348,17 +347,17 @@ def main(config, ptname='model_ema_best_auc_shanxi_val'):
         else:
             max_acc_ema_avg = max(max_acc_ema_avg, acc_ema)
 
-        if auc_test2_ema > max_auc_avg:
+        if auc > max_auc_avg:
             auc_best_epoch = epoch
-            max_auc_avg = max(max_auc_avg, auc_test2_ema)
-            save_test_checkpoint(config, epoch, model_ema.ema, max_auc_avg, optimizer, lr_scheduler,
+            max_auc_avg = max(max_auc_avg, auc)
+            save_test_checkpoint(config, epoch, model, max_auc_avg, optimizer, lr_scheduler,
                                  loss_scaler,
-                                 logger, ptname='model_ema_best_auc_guizhou_test.pth')
+                                 logger, ptname='model_best_auc_shanxi_val.pth')
         else:
-            max_auc_avg = max(max_auc_avg, auc_test2_ema)
+            max_auc_avg = max(max_auc_avg, auc)
 
         if auc_ema > max_auc_ema_avg:
-            # auc_best_epoch = epoch
+            auc_ema_best_epoch = epoch
             max_auc_ema_avg = max(max_auc_ema_avg, auc_ema)
             save_test_checkpoint(config, epoch, model_ema.ema, max_auc_ema_avg, optimizer, lr_scheduler,
                                  loss_scaler,
@@ -366,7 +365,7 @@ def main(config, ptname='model_ema_best_auc_shanxi_val'):
         else:
             max_auc_ema_avg = max(max_auc_ema_avg, auc_ema)
         logger.info(
-            f'Best acc epoch: {best_epoch}' + ' Max acc average: ' + "%.4f" % max_acc_avg + f'Best auc epoch: {auc_best_epoch}' +  'Test auc average: ' + "%.4f" % max_auc_avg)
+            f'Best acc epoch: {acc_best_epoch}' + ' Max acc average: ' + "%.4f" % max_acc_avg + f'Best auc epoch: {auc_best_epoch}' +  'Test auc average: ' + "%.4f" % max_auc_avg + f' Best acc_ema epoch: {acc_ema_best_epoch}' + ' Max acc_ema average: ' + "%.4f" % max_acc_ema_avg + f'Best auc_ema epoch: {auc_ema_best_epoch}' +  'Test auc_ema average: ' + "%.4f" % max_auc_ema_avg)
         restore_rng_states(cpu_state, cuda_state)
     ckp_path = os.path.join(config.OUTPUT, ptname + '.pth')
     if os.path.isfile(ckp_path):
@@ -1126,8 +1125,7 @@ if __name__ == '__main__':
     import pandas as pd
 
     torch.set_num_threads(3)
-    # lrs = [5e-5]
-    pt_names = ['model_ema_best_acc_shanxi_val', 'model_ema_best_auc_shanxi_val', 'model_ema_best_acc_guizhou_test', 'model_ema_best_auc_guizhou_test']
+    pt_names = ['model_ema_best_acc_shanxi_val', 'model_ema_best_auc_shanxi_val', 'model_best_auc_shanxi_val', 'model_best_acc_shanxi_val']
     shanxi_test_avgs = []
     shanxi_test_accs = []
     shanxi_test_aucs = []
