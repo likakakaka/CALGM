@@ -58,7 +58,7 @@ def parse_option():
     parser.add_argument('--disable_amp', action='store_true', help='Disable pytorch amp')
     parser.add_argument('--amp-opt-level', type=str, choices=['O0', 'O1', 'O2'],
                         help='mixed precision opt level, if O0, no amp is used (deprecated!)')
-    parser.add_argument('--output', default='/disk3/wjr/workspace/sec_nejm/temp2', type=str, metavar='PATH',
+    parser.add_argument('--output', default='./jsrtoutput/', type=str, metavar='PATH',
                         help='root of output folder, the full path is <output>/<model_name>/<tag> (default: output)')
     parser.add_argument('--tag', help='tag of experiment')
     parser.add_argument('--eval', default=True, action='store_true', help='Perform evaluation only')
@@ -95,9 +95,9 @@ def build_phe_loader(args):
                                              ])
 
 
-    dataset_test = JSRT_wmask_Dataset('/disk3/wjr/dataset/JSRT/visimg_process/jsrt_seg_rec_img/',
-                                  '/disk3/wjr/dataset/JSRT/visimg_process/jsrt_sec_mask_img',
-                                   txtpath='/disk3/wjr/dataset/JSRT/test_1.txt',
+    dataset_test = JSRT_wmask_Dataset('/dataset/JSRT/visimg_process/jsrt_seg_rec_img/',
+                                  '/dataset/JSRT/visimg_process/jsrt_sec_mask_img',
+                                   txtpath='/dataset/JSRT/test.txt',
                                    data_transform=pil2tensor_transfo)
 
     data_loader_test = torch.utils.data.DataLoader(
@@ -119,8 +119,8 @@ def main(config):
     model.head.fc = nn.Linear(768, 2)
     model.head.detailed_sick_fc = nn.Linear(768, 5)
     model.head.detailed_health_fc = nn.Identity()
-    args.save_path = '/disk3/wjr/workspace/sec_nejm/nejm_baseline_expeript_new/jsrt/512/contra_20251013/wmask_nosubcls_nodropouttest/our/g512_l256_6cls_2cls_tree_cam_wdatamixup_trainval/8034_0.5_cam_0.5_camalign_0.3_cloc_seed0_2_lr5e-05/analyze'
-    ckp_path = '/disk3/wjr/workspace/sec_nejm/nejm_baseline_expeript_new/jsrt/512/contra_20251013/wmask_nosubcls_nodropouttest/our/g512_l256_6cls_2cls_tree_cam_wdatamixup_trainval/8034_0.5_cam_0.5_camalign_0.3_cloc_seed0_2_lr5e-05/model_best_auc_val.pth'
+    args.save_path = args.output+'/analyze'
+    ckp_path = args.output+'model_best_auc_val.pth'
     if os.path.isfile(ckp_path):
         checkpoint = torch.load(ckp_path, map_location="cpu")
         msg = model.load_state_dict(checkpoint['model'], strict=True)
@@ -427,13 +427,7 @@ if __name__ == '__main__':
     import gc
     import pandas as pd
     torch.set_num_threads(3)
-    # model_names = ['DMALNET']
-    # model_names = ['mambaout','PKA2_Net', 'pcam','DMALNET', 'our_best', 'MedMamba ']
-    model_names = ['our_best']
-    for model_name in model_names:
-        args = parse_option()
-        args.batch_size = 1
-        args.model_name = model_name
-        config = get_config(args)
-        main(config)
+    args = parse_option()
+    config = get_config(args)
+    main(config)
 
