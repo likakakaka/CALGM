@@ -1,6 +1,6 @@
 
 <div align="center">
-<h1>SLGMS </h1>
+<h1>CALGM </h1>
 <h3>A Clinically Aligned Local-Global Mutual Learning Framework for Interpretable Pneumoconiosis Diagnosis</h3>
 
 Jiarui Wang, Xuerong Wang, Le Yang, Binglu Wang, Xiaoxu Wang
@@ -40,9 +40,7 @@ pip install numpy==1.26.4
 
 * Download [Convnext_pretrained_pt](https://download.openmmlab.com/mmclassification/v0/convnext-v2/convnext-v2-tiny_fcmae-in21k-pre_3rdparty_in1k_20230104-8cc8b8f2.pth).
 * Preprocess the original chest radiographs by ChexMask ([paper](https://www.nature.com/articles/s41597-024-03358-1), [code](https://github.com/ngaggion/CheXmask-Database))
-<p align="center">
-  <img src="assets/chest_preprocessing.png" alt="overview" width="80%">
-</p>
+
 *Tip.*
    - As for the Rectangular Lung Region achievement, we provide the [data_preprocessing_by_chexmask.py](data_preprocessing_by_chexmask.py). Though replace it with ['CheXmask-Database/HybridGNet/inferenceWithHybridGNet.py'](https://github.com/ngaggion/CheXmask-Database), you can get the same data preprocessing like our paper.
    
