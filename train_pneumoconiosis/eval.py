@@ -55,7 +55,7 @@ def parse_option():
     parser.add_argument('--disable_amp', action='store_true', help='Disable pytorch amp')
     parser.add_argument('--amp-opt-level', type=str, choices=['O0', 'O1', 'O2'],
                         help='mixed precision opt level, if O0, no amp is used (deprecated!)')
-    parser.add_argument('--output', default='/disk3/wjr/workspace/sec_nejm/temp', type=str, metavar='PATH',
+    parser.add_argument('--output', default='./OUTPUT', type=str, metavar='PATH',
                         help='root of output folder, the full path is <output>/<model_name>/<tag> (default: output)')
     parser.add_argument('--tag', help='tag of experiment')
     parser.add_argument('--eval', default=True, action='store_true', help='Perform evaluation only')
@@ -65,7 +65,7 @@ def parse_option():
     parser.add_argument('--subrank_weight', type=float, default=0.3, help='')
 
     parser.add_argument('--pretrained_pth',
-                        default='/disk3/wjr/workspace/sec_nejm/nejm_baseline_expeript_new/allshanxi_sick_health/writer_analyze/512/allstage1_health1_1/selected_dcm_saomiao_900_health308_sick_592/new_contra_20250626/convnext/g512_l256_tree_5cls_2cls_cam_wdatamixup_3/0.5_cam_0.5_camalign_0.3_cloc_lr8e-05/model_ema_best_acc_shanxi_val.pth',
+                        default='./OUTPUT/model_ema_best_acc_shanxi_val.pth',
                         type=str, metavar='PATH',
                         help='root of pretrained model during inference')
 
@@ -85,7 +85,7 @@ def parse_option():
     parser.add_argument('--model_ema_decay', type=float, default=0.999, help='')
     parser.add_argument('--model_ema_force_cpu', type=str2bool, default=False, help='')
 
-    parser.add_argument('--data_root', type=str, default='/disk3/wjr/dataset/nejm/shanxidataset/', help='The path of dataset')
+    parser.add_argument('--data_root', type=str, default='/dataset/pneumoconiosis_path/', help='The path of dataset')
     parser.add_argument('--seed', default=20, type=int)
     parser.add_argument('--memory_limit_rate', type=float, default=-1, help='limitation of gpu memory use')
     parser.add_argument('--pin_mem', default=True,
@@ -131,7 +131,7 @@ def build_phe_loader(args):
 
     dataset_train = Shanxi_w7masks_5Subregions_wsubroi_Dataset(args.data_root + 'seg_rec_img_1024',
                                                       args.data_root + 'seg_rec_mask_1024',
-                                                      txtpath=args.data_root + 'stage1_health_txt/selected_dcm_saomiao_900_health308_sick_592/train.txt',
+                                                      txtpath=args.data_root + 'train.txt',
                                                       csvpath=args.data_root + 'subregions_label_shanxi_all.xlsx',
                                                       data_transform=global_transfo2,
                                                       pil2tensor_transform=pil2tensor_transfo,
@@ -139,7 +139,7 @@ def build_phe_loader(args):
                                                       sub_img_size=256, )
     dataset_val = Shanxi_w7masks_5Subregions_wsubroi_Dataset(args.data_root + 'seg_rec_img_1024',
                                                               args.data_root + 'seg_rec_mask_1024',
-                                                              txtpath=args.data_root + 'stage1_health_txt/selected_dcm_saomiao_900_health308_sick_592/val.txt',
+                                                              txtpath=args.data_root + 'val.txt',
                                                               csvpath=args.data_root + 'subregions_label_shanxi_all.xlsx',
                                                               data_transform=global_transfo2,
                                                               pil2tensor_transform=pil2tensor_transfo,
@@ -147,16 +147,16 @@ def build_phe_loader(args):
                                                               sub_img_size=256, )
     dataset_test = Shanxi_w7masks_5Subregions_wsubroi_Dataset(args.data_root + 'seg_rec_img_1024',
                                                             args.data_root + 'seg_rec_mask_1024',
-                                                            txtpath=args.data_root + 'stage1_health_txt/selected_dcm_saomiao_900_health308_sick_592/test2.txt',
+                                                            txtpath=args.data_root + 'test2.txt',
                                                             csvpath=args.data_root + 'subregions_label_shanxi_all.xlsx',
                                                             data_transform=global_transfo2,
                                                             pil2tensor_transform=pil2tensor_transfo,
                                                             data_subregions_transform=global_transfo2_subregions,
                                                             sub_img_size=256, )
 
-    dataset_test2 = Shanxi_w7masks_5Subregions_wsubroi_Dataset('/disk3/wjr/dataset/nejm/guizhoudataset/seg_rec_img_1024','/disk3/wjr/dataset/nejm/guizhoudataset/seg_rec_mask_1024',
-                                                              txtpath='/disk3/wjr/dataset/nejm/guizhoudataset/guizhou_one.txt',
-                                                              csvpath='/disk3/wjr/dataset/nejm/guizhoudataset/subregions_guizhou_all.xlsx',
+    dataset_test2 = Shanxi_w7masks_5Subregions_wsubroi_Dataset('/dataset/guizhoudataset/seg_rec_img_1024','/dataset/guizhoudataset/seg_rec_mask_1024',
+                                                              txtpath='/dataset/guizhoudataset/guizhou_one.txt',
+                                                              csvpath='/ddataset/guizhoudataset/subregions_guizhou_all.xlsx',
                                                               data_transform=global_transfo2,
                                                               pil2tensor_transform=pil2tensor_transfo,
                                                               data_subregions_transform=global_transfo2_subregions,
