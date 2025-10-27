@@ -255,24 +255,7 @@ def main(config, ptname='model_ema_best_auc_shanxi_val'):
     print("Using EMA with decay = %.8f" % args.model_ema_decay)
 
     ckp_path = os.path.join(config.OUTPUT, ptname + '.pth')
-    if os.path.isfile(ckp_path):
-        checkpoint = torch.load(ckp_path, map_location="cpu")
-        model.load_state_dict(checkpoint['model'], strict=True)
-
-
-        shanxi_val_accuracy, shanxi_val_sensitivity, shanxi_val_specificity, shanxi_val_auc, shanxi_val_f1, mcc_threshold = validate_final(
-            config, data_loader_val, model,
-            threshold=0.5, valdata='shanxi_val')
-        shanxi_train_accuracy, shanxi_train_sensitivity, shanxi_train_specificity, shanxi_train_auc, shanxi_train_f1, mcc_threshold = validate_final(
-            config, data_loader_train2, model,
-            threshold=0.5, valdata='shanxi_train')
-        shanxi_test_accuracy, shanxi_test_sensitivity, shanxi_test_specificity, shanxi_test_auc, shanxi_test_f1, shanxitest_mcc_threshold = validate_final(
-            config, data_loader_test,
-            model, threshold=0.5,
-            valdata='shanxi_test')
-
-        return shanxi_train_auc, shanxi_train_accuracy, shanxi_train_sensitivity, shanxi_train_specificity, shanxi_val_auc, shanxi_val_accuracy, shanxi_val_sensitivity, shanxi_val_specificity, shanxi_test_auc, shanxi_test_accuracy, shanxi_test_sensitivity, shanxi_test_specificity
-
+   
 
     optimizer = build_optimizer(config, model)
     # model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[config.LOCAL_RANK], broadcast_buffers=False)
